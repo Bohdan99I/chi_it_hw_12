@@ -1,9 +1,16 @@
 import { Get, Param, Post, Body, JsonController, Patch } from 'routing-controllers';
 import { ValidateArgs } from '../decorators/validator';
 
+class Tets {
+    constructor() { }
+
+    @ValidateArgs('Test string')
+    test(obj: any) {
+        console.log(obj);
+    }
+}
 @JsonController('/users')
 export class UserController {
-
     @Get('/')
     getAll() {
         return [{ id: 1, name: 'John Doe 1' }, { id: 2, name: 'Jane Doe 2' }];
