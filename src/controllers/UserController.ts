@@ -1,19 +1,16 @@
-import { Get, Param, Post, Body, JsonController, Patch } from 'routing-controllers';
+import { Get, Param, Post, Body, JsonController, Patch, Delete } from 'routing-controllers';
 import { ValidateArgs } from '../decorators/validator';
 import fs from 'fs';
 
-class Tets {
-    constructor() { }
-
-    @ValidateArgs('Test string')
-    test(obj: any) {
-        console.log(obj);
-    }
+interface User {
+    id: number;
+    user: string;
+    email: string;
 }
 
 const USERS_FILE = './src/users.json';
 
-const readUsersFromFile = (): any[] => {
+const readUsersFromFile = (): User[] => {
     if (!fs.existsSync(USERS_FILE)) {
         return [];
     }
@@ -21,18 +18,23 @@ const readUsersFromFile = (): any[] => {
     return JSON.parse(data);
 };
 
-const writeUsersToFile = (users: any[]) => {
+const writeUsersToFile = (users: User[]) => {
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 };
 
-@JsonController('/users')
+@JsonController()
 export class UserController {
     @Get('/')
+    getAuthor() {
+        return { author: "Your Name" };
+    }
+
+    @Get('/users')
     getAll() {
         return readUsersFromFile();
     }
 
-    @Get('/:id')
+    @Get('/users/:id')
     getOne(@Param('id') id: number) {
         const users = readUsersFromFile();
         const user = users.find((u) => u.id === id);
@@ -42,20 +44,22 @@ export class UserController {
         return user;
     }
 
-    @Post('/')
-    create(@Body() user: any) {
+    @Post('/users')
+    @ValidateArgs('create')
+    create(@Body() userData: Partial<User>) {
         const users = readUsersFromFile();
         const newUser = {
             id: users.length + 1,
-            ...user,
-        };
+            ...userData,
+        } as User;
         users.push(newUser);
-        writeUsersToFile(users); 
+        writeUsersToFile(users);
         return { message: 'User created', user: newUser };
     }
 
-    @Patch('/:id')
-    update(@Param('id') id: number, @Body() user: any) {
+    @Patch('/users/:id')
+    @ValidateArgs('update')
+    update(@Param('id') id: number, @Body() userData: Partial<User>) {
         const users = readUsersFromFile();
         const userIndex = users.findIndex((u) => u.id === id);
         if (userIndex === -1) {
@@ -63,10 +67,22 @@ export class UserController {
         }
         const updatedUser = {
             ...users[userIndex],
-            ...user,
+            ...userData,
         };
         users[userIndex] = updatedUser;
         writeUsersToFile(users);
         return { message: 'User updated', user: updatedUser };
+    }
+
+    @Delete('/users/:id')
+    delete(@Param('id') id: number) {
+        const users = readUsersFromFile();
+        const userIndex = users.findIndex((u) => u.id === id);
+        if (userIndex === -1) {
+            return { message: `User with ID ${id} not found` };
+        }
+        users.splice(userIndex, 1);
+        writeUsersToFile(users);
+        return { message: 'User deleted' };
     }
 }

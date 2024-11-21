@@ -1,28 +1,36 @@
 import { HttpError } from "routing-controllers";
 
-function ValidateArgs(test: string) {
-    console.log(`Decorator called with test: ${test}`); // Called once on creation
+interface UserData {
+    user?: string;
+    email?: string;
+}
 
+function isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function ValidateArgs(operation: 'create' | 'update') {
     return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
         const originalMethod = descriptor.value;
 
         descriptor.value = function (...args: any[]) {
-            // args.forEach((arg, index) => {
-            //     console.log(`Аргумент #${index + 1} = ${arg}`);
-            //     console.log(`Тип аргумента #${index + 1} = ${typeof arg}`);
+            const userData: UserData = args[operation === 'update' ? 1 : 0];
 
-            //     // Init argument can be used here
-            //     console.log(`Init argument ${test}`);
-            //     if (typeof arg !== 'object') {
-            //         throw new Error(`Аргумент №${index + 1} не является объектом!`);
-            //     }
-            //     console.log(Object.keys(arg).forEach((key) => {
-            //         console.log(`Ключ аргумента #${index + 1} = ${key}`);
-            //     }));
-            // })
+            // Для створення користувача перевіряємо обов'язкові поля
+            if (operation === 'create') {
+                if (!userData.user || !userData.email) {
+                    throw new HttpError(400, 'Both user and email are required for creating a user');
+                }
+            }
 
-            if (args[0].user.length < 2) {
+            // Перевіряємо поля, якщо вони присутні
+            if (userData.user !== undefined && userData.user.length < 2) {
                 throw new HttpError(400, 'User name must be at least 2 characters long');
+            }
+
+            if (userData.email !== undefined && !isValidEmail(userData.email)) {
+                throw new HttpError(400, 'Invalid email format');
             }
 
             return originalMethod.apply(this, args);
